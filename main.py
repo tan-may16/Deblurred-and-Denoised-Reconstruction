@@ -15,7 +15,7 @@ import os
 def main():
     parser = argparse.ArgumentParser(description='Load Dataset')
     parser.add_argument('--data_path', type=str, default='../dataset/') # dataset/train/GOPR0374_11_00/
-    parser.add_argument('--batch_size', type=int, default=15)
+    parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--epochs', type=int, default=30)
     parser.add_argument('--lr', type=float, default=1e-1)
     parser.add_argument('--eval', action='store_true')
@@ -25,12 +25,12 @@ def main():
     args = parser.parse_args()
     data_path = args.data_path
 
-    args.train_image_dir = data_path + 'train/GOPR0374_11_00/'
-    args.test_image_dir = data_path + 'test/GOPR0374_11_00/'
+    args.train_image_dir = data_path + 'train/'
+    args.test_image_dir = data_path + 'test/'
     args.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     os.makedirs('output_data/', exist_ok = True)
-    train_dataset = GoProDataset( image_dir = args.train_image_dir, image_filename_pattern="{}.png", size = 224)
-    test_dataset = GoProDataset(image_dir=args.test_image_dir, image_filename_pattern="{}.png", size = 224)
+    train_dataset = GoProDataset( image_dir = args.train_image_dir, image_filename_pattern="{}.png" )
+    test_dataset = GoProDataset(image_dir=args.test_image_dir, image_filename_pattern="{}.png")
     
     train_loader = DataLoader(
             train_dataset,
@@ -75,6 +75,7 @@ def main():
             blur, sharp = blur.to(device), sharp.to(device)
             latent_vector = model.encoder(blur)
             output = model.decoder(latent_vector)
+            # print(output.shape)
             loss = torch.mean(criterion(output,sharp).reshape(sharp.shape[0],-1).sum(dim = 1))
             
             optimizer.zero_grad()

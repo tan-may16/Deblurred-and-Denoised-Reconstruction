@@ -61,6 +61,8 @@ class Encoder(nn.Module):
             )
         self.conv_out_dim = input_shape[1] // 8 * input_shape[2] // 8 * 256
 
+        self.fc = nn.Linear(self.conv_out_dim, self.latent_dim)
+
     def forward(self, x):
         x = self.convs(x)
         x = x.reshape(x.shape[0],-1)
