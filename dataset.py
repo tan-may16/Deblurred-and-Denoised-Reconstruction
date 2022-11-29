@@ -82,7 +82,7 @@ for file_name in os.listdir(train_source_folder):
                 if (len(str(i))<6):
                     save_value = '0'*(6-len(str(i))) + str(i)
                 dst_name = new_dir + '/' + save_value + '.png'
-                os.rename(src_file, dst_0name)
+                os.rename(src_file, dst_name)
                 i += 1
 
 i = 0

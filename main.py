@@ -1,26 +1,51 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from tqdm import tqdm
-from torchvision import transforms
 import torch.nn as nn
 from torch.utils.data import DataLoader,Dataset
 import torch
 import torch.optim as optim
-from torch.autograd import Variable
 from GoProDataset import GoProDataset
 import argparse
 from model import *
 from torchvision.utils import save_image, make_grid
 import os
-def main():
+from collections import OrderedDict
+import torch.nn.functional as F
+import wandb
+
+
+def avg_dict(all_metrics):
+    keys = all_metrics[0].keys()
+    avg_metrics = {}
+    for key in keys:
+        avg_metrics[key] = np.mean([all_metrics[i][key].cpu().detach().numpy() for i in range(len(all_metrics))])
+    return avg_metrics
+
+def constant_beta_scheduler(target_val = 1):
+    def _helper(epoch):   
+        return target_val
+    return _helper
+
+def linear_beta_scheduler(max_epochs=None, target_val = 1):
+    def _helper(epoch):
+        beta = epoch*target_val/max_epochs
+        return beta
+    return _helper
+
+
+
+
+def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
+    
+    
     parser = argparse.ArgumentParser(description='Load Dataset')
-    parser.add_argument('--data_path', type=str, default='../dataset/') # dataset/train/GOPR0374_11_00/
-    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument('--data_path', type=str, default='../dataset/') 
+    parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=30)
-    parser.add_argument('--lr', type=float, default=1e-1)
+    parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--eval', action='store_true')
     parser.add_argument('--use_wandb', default = False)
-    
+    parser.add_argument('--latent_size', type=int, default=1024)
+    parser.add_argument('--eval_interval', type=int, default = 5)
     
     args = parser.parse_args()
     data_path = args.data_path
@@ -45,61 +70,85 @@ def main():
             drop_last = False,
             num_workers = 4)
     
-    if torch.cuda.is_available()==True:
-        device="cuda:0"
-    else:
-        device ="cpu"
-
+    model = AEModel(args.latent_size, input_shape = (3, 224, 224)).cuda()
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
     
-    # model=denoising_model().to(device)
-    model = AEModel(False, 1024, input_shape = (3, 224, 224)).to(device)
-    criterion=nn.MSELoss(reduction='none')
-    
-    optimizer=optim.Adam(model.parameters(),lr=0.01,weight_decay=1e-5)
-
-    epochs=args.epochs
-    l=len(train_loader)
-    print("Length",l)
-    losslist=list()
-    epochloss=0
-    running_loss=0
+    if beta_mode == 'constant':
+        beta_fn = constant_beta_scheduler(target_val = target_beta_val) 
+    elif beta_mode == 'linear':
+        beta_fn = linear_beta_scheduler(max_epochs=args.epochs, target_val = target_beta_val) 
+        
+        
     if (args.use_wandb):
-        wandb.init(project="vlr-project")
+        wandb.init(project="vlr-hw2")
     
-    for epoch in range(epochs):
-    
-        print("Entering Epoch: ",epoch)
-        for i,(data) in enumerate(train_loader):
-            blur = data[0]
-            sharp = data[1]
-            blur, sharp = blur.to(device), sharp.to(device)
-            latent_vector = model.encoder(blur)
-            output = model.decoder(latent_vector)
-            # print(output.shape)
-            loss = torch.mean(criterion(output,sharp).reshape(sharp.shape[0],-1).sum(dim = 1))
-            
+    for epoch in range(args.epochs):
+        
+        print('epoch', epoch)
+        
+        model.train()
+        train_metrics_list = []
+        i = 0
+        for x, x_sharp in train_loader:
+            # x = preprocess_data(x)
+            x, x_sharp = x.to(args.device), x_sharp.to(args.device) 
+            latent_vector = model.encoder(x)
+            x_reconstructed = model.decoder(latent_vector)
+            MSE_loss = nn.MSELoss(reduction='none')
+            loss = torch.mean(MSE_loss(x_reconstructed,x_sharp).reshape(x.shape[0],-1).sum(dim = 1))
+            if args.use_wandb:
+                wandb.log("Loss/train":loss)
+            _metric = OrderedDict(recon_loss=loss)
+            train_metrics_list.append(_metric)
             optimizer.zero_grad()
             loss.backward()
-            optimizer.step()
             
-            running_loss+=loss.item()
-            epochloss+=loss.item()
+            if grad_clip:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+                
+            optimizer.step()
+            if i == 0:
+                save_image(make_grid(x_reconstructed.float(), nrow=8),"output_data/{}_reconstructions.jpg".format(epoch))
+                save_image(make_grid(x_sharp, nrow=8),"output_data/{}_original.jpg".format(epoch))
+                save_image(make_grid(x, nrow=8),"output_data/{}_blur.jpg".format(epoch))
+            i+=1  
+            
+        train_metrics = avg_dict(train_metrics_list) 
+        print("Train Metrics")
+        print(epoch, train_metrics)
+               
+        if args.use_wandb:
+                wandb.log(train_metrics)
+                
+                
+        #Validation
+        if (epoch)%(args.eval_interval) == 0:
+            model.eval()
+            val_metrics_list = []
+            with torch.no_grad():
+                i = 0
+                for x, x_sharp in val_loader:
+                    x, x_sharp = x.to(args.device), x_sharp.to(args.device) 
+                    latent_vector = model.encoder(x)
+                    x_reconstructed = model.decoder(latent_vector)
+                    MSE_loss = nn.MSELoss(reduction='none')
+                    loss = torch.mean(MSE_loss(x_reconstructed,x_sharp).reshape(x.shape[0],-1).sum(dim = 1))
+                    if args.use_wandb:
+                        wandb.log("Loss/validation":loss)
+                    _metric = OrderedDict(recon_loss=loss)
+                    val_metrics_list.append(_metric)
+                    if i == 0:
+                        save_image(make_grid(x_reconstructed.float(), nrow=8),"output_data/{}_V_reconstructions.jpg".format(epoch))
+                        save_image(make_grid(x_sharp, nrow=8),"output_data/{}_V_original.jpg".format(epoch))
+                        save_image(make_grid(x, nrow=8),"output_data/{}_V_blur.jpg".format(epoch))
+                    i+=1
+                    
+            val_metrics = avg_dict(val_metrics_list)
+            print("Val Metrics:")
+            print(val_metrics)
             if args.use_wandb:
-                wandb.log(loss)
-            if (epoch%5 == 0) and i==0:
-                save_image(make_grid(output, nrow=8),"output_data/{}_reconstructions.jpg".format(epoch))
-                save_image(make_grid(sharp, nrow=8),"output_data/{}_original.jpg".format(epoch))
-                
-                
-                
-        losslist.append(running_loss/l)
-        running_loss=0
+                wandb.log(val_metrics)    
 
-        print("======> epoch: {}/{}, Loss:{}".format(epoch,epochs,loss.item()))
-
-
-if __name__ == "__main__":
-    main()
-    
-    
+if __name__ == '__main__':
+    main( beta_mode = 'linear', target_beta_val = 1)
 

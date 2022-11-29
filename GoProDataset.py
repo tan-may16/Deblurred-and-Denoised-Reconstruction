@@ -37,7 +37,9 @@ class GoProDataset(Dataset):
             transforms.CenterCrop((672, 672)),
             # transforms.Pad((0, 0, max_dim - width, max_dim - height)),
             transforms.Resize((self.length, self.width)),
-            transforms.ToTensor()])
+            transforms.ToTensor(),
+            # transforms.Normalize([0.5],[0.5])
+            ])
         img_blur = preprocessing(_img_blur)
         img_sharp = preprocessing(_img_sharp)
         

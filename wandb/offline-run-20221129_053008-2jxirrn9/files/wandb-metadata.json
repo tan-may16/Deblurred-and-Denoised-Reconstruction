@@ -1,0 +1,85 @@
+{
+    "os": "Linux-5.4.0-1060-aws-x86_64-with-glibc2.10",
+    "python": "3.8.15",
+    "heartbeatAt": "2022-11-29T05:30:08.582955",
+    "startedAt": "2022-11-29T05:30:08.501420",
+    "docker": null,
+    "cuda": "10.0.130",
+    "args": [],
+    "state": "running",
+    "program": "main.py",
+    "codePath": "main.py",
+    "git": {
+        "remote": "https://github.com/tan-may16/VLR_Project.git",
+        "commit": "cb43c8f670d39c133492adae2576baf8993c86ca"
+    },
+    "email": null,
+    "root": "/home/ubuntu/data/VLR/VLR_Project",
+    "host": "ip-172-31-13-123",
+    "username": "ubuntu",
+    "executable": "/home/ubuntu/anaconda3/envs/vlr/bin/python3",
+    "cpu_count": 4,
+    "cpu_count_logical": 8,
+    "cpu_freq": {
+        "current": 3103.238375,
+        "min": 0.0,
+        "max": 0.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3102.782,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 3102.617,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 3101.919,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 3100.197,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 3108.369,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 3106.542,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 3104.189,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 3099.292,
+            "min": 0.0,
+            "max": 0.0
+        }
+    ],
+    "disk": {
+        "total": 125.96025466918945,
+        "used": 115.67813110351562
+    },
+    "gpu": "Tesla T4",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "Tesla T4",
+            "memory_total": 15843721216
+        }
+    ],
+    "memory": {
+        "total": 30.911258697509766
+    }
+}
