@@ -32,7 +32,13 @@ def linear_beta_scheduler(max_epochs=None, target_val = 1):
     return _helper
 
 
-
+def _load_ckpnt(args,model,optimizer):
+        ckpnt = torch.load(args.ckpnt)
+        model.load_state_dict(ckpnt["model_state_dict"], strict=False)
+        optimizer.load_state_dict(ckpnt["optimizer_state_dict"])
+        start_epoch = ckpnt["epoch"]
+        val_acc_prev_best = ckpnt['best_loss']
+        return start_epoch, val_acc_prev_best
 
 def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
     
@@ -46,6 +52,7 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
     parser.add_argument('--use_wandb', default = False)
     parser.add_argument('--latent_size', type=int, default=1024)
     parser.add_argument('--eval_interval', type=int, default = 5)
+    parser.add_argument('--ckpnt', type=str, default=None)
     
     args = parser.parse_args()
     data_path = args.data_path
@@ -54,8 +61,8 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
     args.test_image_dir = data_path + 'test/'
     args.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     os.makedirs('output_data/', exist_ok = True)
-    train_dataset = GoProDataset( image_dir = args.train_image_dir, image_filename_pattern="{}.png" )
-    test_dataset = GoProDataset(image_dir=args.test_image_dir, image_filename_pattern="{}.png")
+    train_dataset = GoProDataset( image_dir = args.train_image_dir, image_filename_pattern="{}.png" ,length=224, width = 224)
+    test_dataset = GoProDataset(image_dir=args.test_image_dir, image_filename_pattern="{}.png", length=224, width = 224)
     
     train_loader = DataLoader(
             train_dataset,
@@ -81,7 +88,13 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
         
     if (args.use_wandb):
         wandb.init(project="vlr-hw2")
-    
+        
+    train_loss_prev_best = float("inf")
+    if args.ckpnt is None:
+        args.ckpnt = "model.pt"    
+        
+    if os.path.exists(args.ckpnt):
+            start_epoch, val_acc_prev_best = _load_ckpnt(args,model,optimizer)
     for epoch in range(args.epochs):
         
         print('epoch', epoch)
@@ -90,6 +103,7 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
         train_metrics_list = []
         i = 0
         for x, x_sharp in train_loader:
+            
             # x = preprocess_data(x)
             x, x_sharp = x.to(args.device), x_sharp.to(args.device) 
             latent_vector = model.encoder(x)
@@ -97,7 +111,7 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
             MSE_loss = nn.MSELoss(reduction='none')
             loss = torch.mean(MSE_loss(x_reconstructed,x_sharp).reshape(x.shape[0],-1).sum(dim = 1))
             if args.use_wandb:
-                wandb.log("Loss/train":loss)
+                wandb.log({"Loss/train":loss})
             _metric = OrderedDict(recon_loss=loss)
             train_metrics_list.append(_metric)
             optimizer.zero_grad()
@@ -120,7 +134,23 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
         if args.use_wandb:
                 wandb.log(train_metrics)
                 
-                
+        if (epoch)%(args.eval_interval) == 0:
+            train_loss = train_metrics['recon_loss']  
+            
+            if train_loss <= train_loss_prev_best:
+                print("Saving Checkpoint")
+                torch.save({
+                    "epoch": epoch + 1,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "best_loss": train_loss
+                }, args.ckpnt)
+                train_loss_prev_best = train_loss
+            else:
+                print("Updating Checkpoint")
+                checkpoint = torch.load(args.ckpnt)
+                checkpoint["epoch"] += 1
+                torch.save(checkpoint, args.ckpnt)      
         #Validation
         if (epoch)%(args.eval_interval) == 0:
             model.eval()
@@ -134,7 +164,7 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
                     MSE_loss = nn.MSELoss(reduction='none')
                     loss = torch.mean(MSE_loss(x_reconstructed,x_sharp).reshape(x.shape[0],-1).sum(dim = 1))
                     if args.use_wandb:
-                        wandb.log("Loss/validation":loss)
+                        wandb.log({"Loss/validation":loss})
                     _metric = OrderedDict(recon_loss=loss)
                     val_metrics_list.append(_metric)
                     if i == 0:

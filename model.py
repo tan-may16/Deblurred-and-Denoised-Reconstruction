@@ -1,6 +1,6 @@
 import numpy as np
 import torch.nn as nn
-
+import torch.nn.functional as F
 
 class Encoder(nn.Module):
     def __init__(self, input_shape, latent_dim):
@@ -41,8 +41,8 @@ class Decoder(nn.Module):
                 nn.ReLU(),
                 nn.ConvTranspose2d(64, 32, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
-                nn.Conv2d(32, 3, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-                
+                nn.Conv2d(32, 3, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
+                # nn.Tanh()
             )
 
     def forward(self, z):
@@ -50,6 +50,7 @@ class Decoder(nn.Module):
         s0,s1,s2 = self.base_size
         z = z.reshape(-1,s0,s1,s2)
         z = self.deconvs(z)
+        # z = F.tanh(z)
         return z
     
 
