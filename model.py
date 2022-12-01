@@ -10,10 +10,13 @@ class Encoder(nn.Module):
         self.convs = nn.Sequential(
                 nn.Conv2d(3, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
                 nn.ReLU(),
+                # nn.Dropout(0.25),
                 nn.Conv2d(32, 64, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
+                # nn.Dropout(0.25),
                 nn.Conv2d(64, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
+                # nn.Dropout(0.25),
                 nn.Conv2d(128, 256, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
             )
         self.conv_out_dim = input_shape[1] // 8 * input_shape[2] // 8 * 256
@@ -37,10 +40,13 @@ class Decoder(nn.Module):
                 nn.ReLU(),
                 nn.ConvTranspose2d(128, 128, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
+                nn.Dropout(0.25),
                 nn.ConvTranspose2d(128, 64, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
+                nn.Dropout(0.25),
                 nn.ConvTranspose2d(64, 32, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
+                nn.Dropout(0.25),
                 nn.Conv2d(32, 3, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
                 # nn.Tanh()
             )
