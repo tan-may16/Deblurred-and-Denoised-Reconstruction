@@ -11,6 +11,7 @@ import os
 from collections import OrderedDict
 import torch.nn.functional as F
 import wandb
+import pytorch_ssim
 
 
 def avg_dict(all_metrics):
@@ -41,8 +42,7 @@ def _load_ckpnt(args,model,optimizer):
         return start_epoch, val_acc_prev_best
 
 def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
-    
-    
+
     parser = argparse.ArgumentParser(description='Load Dataset')
     parser.add_argument('--data_path', type=str, default='../dataset/') 
     parser.add_argument('--batch_size', type=int, default=64)
@@ -87,7 +87,7 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
         
         
     if (args.use_wandb):
-        wandb.init(project="vlr-hw2")
+        wandb.init(project="VLR: Project")
         
     train_loss_prev_best = float("inf")
     # if args.ckpnt is None:
