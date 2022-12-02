@@ -87,7 +87,7 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
         
         
     if (args.use_wandb):
-        wandb.init(project="VLR: Project")
+        wandb.init(project="VLR-Project")
         
     train_loss_prev_best = float("inf")
     # if args.ckpnt is None:
