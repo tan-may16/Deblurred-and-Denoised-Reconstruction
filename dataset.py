@@ -27,14 +27,12 @@ train_source_folder = r"/home/ubuntu/data/VLR/raw_dataset/train/"
 test_destination_folder = r"/home/ubuntu/data/VLR/dataset/test/"
 train_destination_folder = r"/home/ubuntu/data/VLR/dataset/train/"
 
-sharp_test = []
-sharp_train = []
-blur_test = []
-blur_train = []
-
 i = 0
+j = 0
+k = 0
+l = 0
 
-#Preprocessing Test files to newly created directories
+#Preprocessing Test files to newly created directories.
 print("Preprocessing Test Files.")
 for file_name in os.listdir(test_source_folder):
     subfile = test_source_folder + file_name
@@ -50,14 +48,7 @@ for file_name in os.listdir(test_source_folder):
                 dst_name = new_dir + '/' + save_value + '.png'
                 os.rename(src_file, dst_name)
                 i += 1
-
-i = 0
-
-for file_name in os.listdir(test_source_folder):
-    subfile = test_source_folder + file_name
-    # print(subfile)
-    for image_file in os.listdir(subfile):
-        if image_file == 'sharp':
+        elif image_file == 'sharp':
             images_dir = os.path.join(subfile, image_file)
             for fname in os.listdir(images_dir):
                 src_file  = os.path.join(images_dir, fname)
@@ -66,10 +57,10 @@ for file_name in os.listdir(test_source_folder):
                     save_value = '0'*(6-len(str(i))) + str(i)
                 dst_name = new_dir + '/' + save_value + '.png'
                 os.rename(src_file, dst_name)
-                i += 1
+                j += 1
 
-i = 0
-
+print("Test Files Copied.")   
+#Preprocessing Train files to newly created directories.            
 for file_name in os.listdir(train_source_folder):
     subfile = train_source_folder + file_name
     # print(subfile)
@@ -83,15 +74,8 @@ for file_name in os.listdir(train_source_folder):
                     save_value = '0'*(6-len(str(i))) + str(i)
                 dst_name = new_dir + '/' + save_value + '.png'
                 os.rename(src_file, dst_name)
-                i += 1
-
-i = 0
-
-for file_name in os.listdir(train_source_folder):
-    subfile = train_source_folder + file_name
-    # print(subfile)
-    for image_file in os.listdir(subfile):
-        if image_file == 'sharp':
+                k += 1
+        elif image_file == 'sharp':
             images_dir = os.path.join(subfile, image_file)
             for fname in os.listdir(images_dir):
                 src_file  = os.path.join(images_dir, fname)
@@ -100,4 +84,6 @@ for file_name in os.listdir(train_source_folder):
                     save_value = '0'*(6-len(str(i))) + str(i)
                 dst_name = new_dir + '/' + save_value + '.png'
                 os.rename(src_file, dst_name)
-                i += 1
+                l += 1
+print("Train Files Copied.")
+print("All Files Copied.")

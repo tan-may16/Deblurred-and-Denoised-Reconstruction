@@ -11,6 +11,7 @@ import os
 from collections import OrderedDict
 import torch.nn.functional as F
 import wandb
+import pytorch_ssim
 
 
 def avg_dict(all_metrics):
@@ -41,13 +42,12 @@ def _load_ckpnt(args,model,optimizer):
         return start_epoch, val_acc_prev_best
 
 def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
-    
-    
+
     parser = argparse.ArgumentParser(description='Load Dataset')
     parser.add_argument('--data_path', type=str, default='../dataset/') 
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=30)
-    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--eval', action='store_true')
     parser.add_argument('--use_wandb', default = False)
     parser.add_argument('--latent_size', type=int, default=1024)
@@ -87,14 +87,14 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
         
         
     if (args.use_wandb):
-        wandb.init(project="vlr-hw2")
+        wandb.init(project="VLR-Project")
         
     train_loss_prev_best = float("inf")
-    if args.ckpnt is None:
-        args.ckpnt = "model.pt"    
+    # if args.ckpnt is None:
+    #     args.ckpnt = "model.pt"    
         
-    if os.path.exists(args.ckpnt):
-            start_epoch, val_acc_prev_best = _load_ckpnt(args,model,optimizer)
+    # if os.path.exists(args.ckpnt):
+    #         start_epoch, val_acc_prev_best = _load_ckpnt(args,model,optimizer)
     for epoch in range(args.epochs):
         
         print('epoch', epoch)
@@ -121,7 +121,7 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
                 torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
                 
             optimizer.step()
-            if i == 0:
+            if epoch % (args.eval_interval) == 0 and i == 0:
                 save_image(make_grid(x_reconstructed.float(), nrow=8),"output_data/{}_reconstructions.jpg".format(epoch))
                 save_image(make_grid(x_sharp, nrow=8),"output_data/{}_original.jpg".format(epoch))
                 save_image(make_grid(x, nrow=8),"output_data/{}_blur.jpg".format(epoch))
@@ -135,22 +135,23 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
                 wandb.log(train_metrics)
                 
         if (epoch)%(args.eval_interval) == 0:
-            train_loss = train_metrics['recon_loss']  
+            torch.save(model.state_dict, 'model_{}.pt'.format(epoch))
+            # train_loss = train_metrics['recon_loss']  
             
-            if train_loss <= train_loss_prev_best:
-                print("Saving Checkpoint")
-                torch.save({
-                    "epoch": epoch + 1,
-                    "model_state_dict": model.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "best_loss": train_loss
-                }, args.ckpnt)
-                train_loss_prev_best = train_loss
-            else:
-                print("Updating Checkpoint")
-                checkpoint = torch.load(args.ckpnt)
-                checkpoint["epoch"] += 1
-                torch.save(checkpoint, args.ckpnt)      
+            # if train_loss <= train_loss_prev_best:
+            #     print("Saving Checkpoint")
+            #     torch.save({
+            #         "epoch": epoch + 1,
+            #         "model_state_dict": model.state_dict(),
+            #         "optimizer_state_dict": optimizer.state_dict(),
+            #         "best_loss": train_loss
+            #     }, args.ckpnt)
+            #     train_loss_prev_best = train_loss
+            # else:
+            #     print("Updating Checkpoint")
+            #     checkpoint = torch.load(args.ckpnt)
+            #     checkpoint["epoch"] += 1
+            #     torch.save(checkpoint, args.ckpnt)      
         #Validation
         if (epoch)%(args.eval_interval) == 0:
             model.eval()

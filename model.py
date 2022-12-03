@@ -10,10 +10,19 @@ class Encoder(nn.Module):
         self.convs = nn.Sequential(
                 nn.Conv2d(3, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
                 nn.ReLU(),
+                nn.Dropout(0.25),
+                # nn.BatchNorm2d(32),
+                nn.AdaptiveMaxPool2d((None, None)),
                 nn.Conv2d(32, 64, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
+                nn.Dropout(0.25),
+                # nn.BatchNorm2d(64),
+                nn.AdaptiveMaxPool2d((None, None)),
                 nn.Conv2d(64, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
+                nn.Dropout(0.25),
+                # nn.BatchNorm2d(128),
+                nn.AdaptiveMaxPool2d((None, None)),
                 nn.Conv2d(128, 256, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
             )
         self.conv_out_dim = input_shape[1] // 8 * input_shape[2] // 8 * 256
@@ -22,8 +31,8 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         x = self.convs(x)
-        x = x.reshape(x.shape[0],-1)
-        x = self.fc(x)
+        # x = x.reshape(x.shape[0],-1)
+        # x = self.fc(x)
         return x
 
 class Decoder(nn.Module):
@@ -35,20 +44,26 @@ class Decoder(nn.Module):
         self.fc = nn.Linear(latent_dim, np.prod(self.base_size))
         self.deconvs = nn.Sequential(
                 nn.ReLU(),
-                nn.ConvTranspose2d(128, 128, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
+                nn.ConvTranspose2d(256, 128, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
+                # nn.BatchNorm2d(128),
+                nn.Dropout(0.25),
                 nn.ConvTranspose2d(128, 64, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
+                # nn.BatchNorm2d(64),
+                nn.Dropout(0.25),
                 nn.ConvTranspose2d(64, 32, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
+                nn.BatchNorm2d(32),
+                nn.Dropout(0.25),
                 nn.Conv2d(32, 3, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
                 # nn.Tanh()
             )
 
     def forward(self, z):
-        z = self.fc(z)
-        s0,s1,s2 = self.base_size
-        z = z.reshape(-1,s0,s1,s2)
+        # z = self.fc(z)
+        # s0,s1,s2 = self.base_size
+        # z = z.reshape(-1,s0,s1,s2)
         z = self.deconvs(z)
         # z = F.tanh(z)
         return z
