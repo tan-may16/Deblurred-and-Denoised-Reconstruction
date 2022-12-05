@@ -135,7 +135,7 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
                 wandb.log(train_metrics)
                 
         if (epoch)%(args.eval_interval) == 0:
-            torch.save(model.state_dict, 'model_{}.pt'.format(epoch))
+            torch.save(model.state_dict(), 'model_{}.pt'.format(epoch))
             # train_loss = train_metrics['recon_loss']  
             
             # if train_loss <= train_loss_prev_best:
