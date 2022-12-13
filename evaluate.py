@@ -11,6 +11,7 @@ import os
 from collections import OrderedDict
 import torch.nn.functional as F
 import wandb
+from sewar.full_ref import mse, rmse, psnr, uqi, ssim, ergas, scc, rase, sam, msssim, vifp
 
 
 def main(grad_clip=1):
@@ -50,6 +51,7 @@ def main(grad_clip=1):
             num_workers = 4)
     
     PATH = args.model_name
+    print(PATH)
     model_params = torch.load(PATH)
     model = AEModel(args.latent_size, input_shape = (3, 224, 224)).cuda()
     model.load_state_dict(model_params)
@@ -66,9 +68,22 @@ def main(grad_clip=1):
             x, x_sharp = x.to(args.device), x_sharp.to(args.device) 
             latent_vector = model.encoder(x)
             x_reconstructed = model.decoder(latent_vector)
-            MSE_loss = nn.MSELoss(reduction='none')
-            loss = torch.mean(MSE_loss(x_reconstructed,x_sharp).reshape(x.shape[0],-1).sum(dim = 1))
-            
+            # MSE_loss = nn.MSELoss(reduction='none')
+            # loss = torch.mean(MSE_loss(x_reconstructed,x_sharp).reshape(x.shape[0],-1).sum(dim = 1))
+            x_reconstructed_new = x_reconstructed.cpu().detach().numpy().reshape(x_reconstructed.shape[0],224,224,3)
+            x_sharp_new = x_sharp.cpu().detach().numpy().reshape(x_reconstructed.shape[0],224,224,3)
+            # print(x_reconstructed.cpu().detach().numpy().reshape(x_reconstructed.shape[0],224,224,3))
+            print("MSE: ", mse(x_reconstructed_new,x_sharp_new))
+            print("RMSE: ", rmse(x_reconstructed_new,x_sharp_new))
+            # print("PSNR: ", psnr(x_reconstructed_new,x_sharp_new))
+            # print("SSIM: ", ssim(x_reconstructed_new,x_sharp_new))
+            print("UQI: ", uqi(x_reconstructed_new,x_sharp_new))
+            # print("MSSSIM: ", msssim(x_reconstructed_new,x_sharp_new))
+            # print("ERGAS: ", ergas(x_reconstructed_new,x_sharp_new))
+            # print("SCC: ", scc(x_reconstructed_new,x_sharp_new))
+            print("RASE: ", rase(x_reconstructed_new,x_sharp_new))
+            # print("SAM: ", sam(x_reconstructed_new,x_sharp_new))
+            # print("VIF: ", vifp(x_reconstructed_new,x_sharp_new))
             
             save_image(make_grid(x_reconstructed.float(), nrow=8),output_path+"{}_reconstructions.jpg".format(i))
             save_image(make_grid(x_sharp, nrow=8),output_path+"{}_original.jpg".format(i))

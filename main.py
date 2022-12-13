@@ -11,7 +11,7 @@ import os
 from collections import OrderedDict
 import torch.nn.functional as F
 import wandb
-import pytorch_ssim
+# import pytorch_ssim
 
 
 def avg_dict(all_metrics):
@@ -52,7 +52,7 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
     parser.add_argument('--use_wandb', default = False)
     parser.add_argument('--latent_size', type=int, default=1024)
     parser.add_argument('--eval_interval', type=int, default = 5)
-    parser.add_argument('--ckpnt', type=str, default=None)
+    parser.add_argument('--ckpnt', type=str, default="Model_final")
     
     args = parser.parse_args()
     data_path = args.data_path
@@ -77,9 +77,9 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
             drop_last = False,
             num_workers = 4)
     
-    model = AEModel(args.latent_size, input_shape = (3, 224, 224)).cuda()
+    model = AEModel(args.latent_size, input_shape = (3, 224,224)).cuda()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
     if beta_mode == 'constant':
         beta_fn = constant_beta_scheduler(target_val = target_beta_val) 
     elif beta_mode == 'linear':
@@ -108,8 +108,10 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
             x, x_sharp = x.to(args.device), x_sharp.to(args.device) 
             latent_vector = model.encoder(x)
             x_reconstructed = model.decoder(latent_vector)
-            MSE_loss = nn.MSELoss(reduction='none')
-            loss = torch.mean(MSE_loss(x_reconstructed,x_sharp).reshape(x.shape[0],-1).sum(dim = 1))
+            # MSE_loss = nn.MSELoss(reduction='none')
+            # loss = torch.mean(MSE_loss(x_reconstructed,x_sharp).reshape(x.shape[0],-1).sum(dim = 1))
+            L1_loss = nn.L1Loss(reduction='sum')
+            loss = torch.mean(L1_loss(x_reconstructed,x_sharp))
             if args.use_wandb:
                 wandb.log({"Loss/train":loss})
             _metric = OrderedDict(recon_loss=loss)
@@ -126,7 +128,7 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
                 save_image(make_grid(x_sharp, nrow=8),"output_data/{}_original.jpg".format(epoch))
                 save_image(make_grid(x, nrow=8),"output_data/{}_blur.jpg".format(epoch))
             i+=1  
-            
+        # lr_scheduler.step()
         train_metrics = avg_dict(train_metrics_list) 
         print("Train Metrics")
         print(epoch, train_metrics)
@@ -135,7 +137,12 @@ def main(beta_mode = 'constant', target_beta_val = 1, grad_clip=1):
                 wandb.log(train_metrics)
                 
         if (epoch)%(args.eval_interval) == 0:
-            torch.save(model.state_dict, 'model_{}.pt'.format(epoch))
+            torch.save(model.state_dict(), 'model_{}.pt'.format(epoch))
+            torch.save({
+                    "epoch": epoch + 1,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict()
+                }, args.ckpnt)
             # train_loss = train_metrics['recon_loss']  
             
             # if train_loss <= train_loss_prev_best:
