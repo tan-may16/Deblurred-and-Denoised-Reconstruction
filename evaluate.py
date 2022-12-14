@@ -57,7 +57,7 @@ def main(grad_clip=1):
     model.load_state_dict(model_params)
     
     if (args.use_wandb):
-        wandb.init(project="vlr-project")
+        wandb.init(project="VLR-Project-Eval")
         
     model.eval()
     i = 0

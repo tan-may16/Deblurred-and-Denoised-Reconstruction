@@ -82,16 +82,16 @@ class Encoder(nn.Module):
         self.convs = nn.Sequential(
                 nn.Conv2d(3, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
                 nn.ReLU(),
-                # nn.Dropout(0.25),
-                # # nn.BatchNorm2d(32),
+                # nn.BatchNorm2d(32),
+                # # nn.Dropout(0.25),
                 # nn.MaxPool2d(1,1),
                 nn.AvgPool2d(1,1),
                 nn.Conv2d(32, 64, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
                 # nn.MaxPool2d(1,1),
                 nn.AvgPool2d(1,1),
-                # nn.Dropout(0.25),
-                # # nn.BatchNorm2d(64),
+                # nn.BatchNorm2d(64),
+                # # nn.Dropout(0.25),
                 # nn.AdaptiveMaxPool2d((None, None)),
                 nn.Conv2d(64, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
@@ -106,6 +106,10 @@ class Encoder(nn.Module):
                 # nn.MaxPool2d(1,1),
                 
                 # nn.Conv2d(256, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+                nn.BatchNorm2d(128),
+                nn.AdaptiveMaxPool2d((None, None)),
+                nn.Dropout(0.5),
+                nn.Conv2d(128, 256, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
             )
         # self.conv_out_dim = input_shape[1] // 8 * input_shape[2] // 8 * 256
 
@@ -130,18 +134,17 @@ class Decoder(nn.Module):
                 # nn.ReLU(),
                 nn.ConvTranspose2d(256, 128, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
-                # nn.BatchNorm2d(128),
-                # nn.Dropout(0.25),
+                nn.BatchNorm2d(128),
+                # # nn.Dropout(0.25),
                 nn.ConvTranspose2d(128, 64, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
                 # nn.BatchNorm2d(64),
-                # nn.Dropout(0.25),
+                nn.Dropout(0.25),
                 nn.ConvTranspose2d(64, 32, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
                 nn.ReLU(),
-                # nn.BatchNorm2d(32),
-                # nn.Dropout(0.25),
-                nn.ConvTranspose2d(32, 3, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
-                nn.Sigmoid()
+                nn.BatchNorm2d(32),
+                nn.Dropout(0.25),
+                nn.Conv2d(32, 3, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
                 # nn.Tanh()
             )
 
